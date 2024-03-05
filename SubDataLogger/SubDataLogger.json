@@ -1,0 +1,8 @@
+{
+  "Author": "Adalyia",
+  "Name": "Sub Data Logger",
+  "Punchline": "Automates logging of voyage loot",
+  "Description": "Automates logging of voyage loot. /sdata",
+  "ApplicableVersion": "any",
+  "Tags": []
+}
