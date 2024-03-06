@@ -6,6 +6,8 @@ using Dalamud.Interface.Windowing;
 using Dalamud.Plugin.Services;
 using SubDataLogger.Windows;
 using Dalamud.Game;
+using System.Threading;
+using System;
 
 namespace SubDataLogger
 {
@@ -20,7 +22,6 @@ namespace SubDataLogger
         public ICommandManager CommandManager { get; init; }
         public ISigScanner SigScanner { get; init; }
         public IPluginLog Log { get; init; }
-        public IFramework Framework { get; init; }
         public IGameInteropProvider Hook { get; init; }
         public IToastGui ToastGui { get; init; }
         public IClientState ClientState { get; init; }
@@ -35,13 +36,13 @@ namespace SubDataLogger
 
         // Stuff
         public HookManager? HookManager = null!;
+        public UploadManager? UploadManager = null!;
 
         public Plugin(
             DalamudPluginInterface pluginInterface,
             ICommandManager commandManager,
             ISigScanner sigScanner,
             IPluginLog log,
-            IFramework framework,
             IGameInteropProvider hook,
             IToastGui toastGui,
             IClientState clientState,
@@ -51,11 +52,11 @@ namespace SubDataLogger
             this.CommandManager = commandManager;
             this.SigScanner = sigScanner;
             this.Log = log;
-            this.Framework = framework;
             this.Hook = hook;
             this.ToastGui = toastGui;
             this.ClientState = clientState;
             this.Data = data;
+            this.UploadManager = new UploadManager(this);
 
 
             this.Configuration = this.PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
@@ -64,6 +65,8 @@ namespace SubDataLogger
             ConfigWindow = new ConfigWindow(this);
             
             WindowSystem.AddWindow(ConfigWindow);
+
+           
 
             this.CommandManager.AddHandler(CommandName, new CommandInfo(OnCommand)
             {
@@ -80,15 +83,14 @@ namespace SubDataLogger
         {
             this.WindowSystem.RemoveAllWindows();
             
-            ConfigWindow.Dispose();
+            this.ConfigWindow.Dispose();
             this.HookManager.Dispose();
-            
+            this.UploadManager?.Dispose();
             this.CommandManager.RemoveHandler(CommandName);
         }
 
         private void OnCommand(string command, string args)
         {
-            // in response to the slash command, just display our main ui
             ConfigWindow.IsOpen = true;
         }
 

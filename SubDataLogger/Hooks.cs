@@ -1,97 +1,39 @@
+/**
+ * Based on https://raw.githubusercontent.com/Infiziert90/SubmarineTracker/master/SubmarineTracker/Manager/HookManager.cs
+ */
+
 using Dalamud.Hooking;
 using Dalamud.Memory;
 using FFXIVClientStructs.FFXIV.Client.Game.Housing;
 using Lumina.Excel.GeneratedSheets;
-using SubDataLogger;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using Newtonsoft.Json;
 using Lumina.Excel;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading;
 
 namespace SubDataLogger;
-/**
- * Imported from https://raw.githubusercontent.com/Infiziert90/SubmarineTracker/master/SubmarineTracker/Manager/HookManager.cs
- * 
- */
 
 public class HookManager
 {
-    private readonly Plugin Plugin;
+    private readonly Plugin plugin;
 
     private const string PacketReceiverSig = "E8 ?? ?? ?? ?? E9 ?? ?? ?? ?? 44 0F B6 43 ?? 4C 8D 4B 17";
     private const string PacketReceiverSigCN = "E8 ?? ?? ?? ?? E9 ?? ?? ?? ?? 44 0F B6 46 ??";
     private delegate void PacketDelegate(uint param1, ushort param2, sbyte param3, Int64 param4, char param5);
-    private readonly Hook<PacketDelegate> PacketHandlerHook;
+    private readonly Hook<PacketDelegate> packetHandlerHook;
     private static ExcelSheet<Item> ItemSheet = null!;
 
-    public static readonly Dictionary<ushort, uint> PartIdToItemId = new()
-    {
-        // Shark
-        { 1, 21792 }, // Bow
-        { 2, 21793 }, // Bridge
-        { 3, 21794 }, // Hull
-        { 4, 21795 }, // Stern
-
-        // Ubiki
-        { 5, 21796 },
-        { 6, 21797 },
-        { 7, 21798 },
-        { 8, 21799 },
-
-        // Whale
-        { 9, 22526 },
-        { 10, 22527 },
-        { 11, 22528 },
-        { 12, 22529 },
-
-        // Coelacanth
-        { 13, 23903 },
-        { 14, 23904 },
-        { 15, 23905 },
-        { 16, 23906 },
-
-        // Syldra
-        { 17, 24344 },
-        { 18, 24345 },
-        { 19, 24346 },
-        { 20, 24347 },
-
-        // Modified same order
-        { 21, 24348 },
-        { 22, 24349 },
-        { 23, 24350 },
-        { 24, 24351 },
-
-        { 25, 24352 },
-        { 26, 24353 },
-        { 27, 24354 },
-        { 28, 24355 },
-
-        { 29, 24356 },
-        { 30, 24357 },
-        { 31, 24358 },
-        { 32, 24359 },
-
-        { 33, 24360 },
-        { 34, 24361 },
-        { 35, 24362 },
-        { 36, 24363 },
-
-        { 37, 24364 },
-        { 38, 24365 },
-        { 39, 24366 },
-        { 40, 24367 }
-    };
+    
 
     public HookManager(Plugin plugin)
     {
-        Plugin = plugin;
-        ItemSheet = Plugin.Data.GetExcelSheet<Item>()!;
+        this.plugin = plugin;
+
+        ItemSheet = this.plugin.Data.GetExcelSheet<Item>()!;
 
         // Try to resolve the CN sig if normal one fails ...
         // Doing this because CN people use an outdated version that still uploads data
@@ -99,26 +41,26 @@ public class HookManager
         nint packetReceiverPtr;
         try
         {
-            packetReceiverPtr = Plugin.SigScanner.ScanText(PacketReceiverSig);
+            packetReceiverPtr = this.plugin.SigScanner.ScanText(PacketReceiverSig);
         }
         catch (Exception)
         {
-            Plugin.Log.Error("Exception in sig scan, maybe CN client?");
-            packetReceiverPtr = Plugin.SigScanner.ScanText(PacketReceiverSigCN);
+            this.plugin.Log.Error("Exception in sig scan, maybe CN client?");
+            packetReceiverPtr = this.plugin.SigScanner.ScanText(PacketReceiverSigCN);
         }
 
-        PacketHandlerHook = Plugin.Hook.HookFromAddress<PacketDelegate>(packetReceiverPtr, PacketReceiver);
-        PacketHandlerHook.Enable();
+        packetHandlerHook = this.plugin.Hook.HookFromAddress<PacketDelegate>(packetReceiverPtr, PacketReceiver);
+        packetHandlerHook.Enable();
     }
 
     public void Dispose()
     {
-        PacketHandlerHook.Dispose();
+        packetHandlerHook.Dispose();
     }
 
     private unsafe void PacketReceiver(uint param1, ushort param2, sbyte param3, Int64 param4, char param5)
     {
-        PacketHandlerHook.Original(param1, param2, param3, param4, param5);
+        packetHandlerHook.Original(param1, param2, param3, param4, param5);
 
         // We only care about voyage Result
         if (param1 != 721343)
@@ -134,71 +76,79 @@ public class HookManager
             if (current.Value == null)
                 return;
 
-            var sub = current.Value;
-
-            var lootList = GetLootList(sub->GatheredDataSpan)!;
-            var charName = Plugin.ClientState.LocalPlayer!.Name;
-            
-            var subName = MemoryHelper.ReadSeStringNullTerminated((nint)sub->Name).ToString();
-            var subLevel = sub->RankId;
-            var managedArray = new byte[5];
-            Marshal.Copy((nint)sub->CurrentExplorationPoints, managedArray, 0, 5);
-            StringBuilder sb = new StringBuilder();
+            // Get the sub data
+            var sub = current.Value; // HousingWorkshopSubmarine
+            var lootList = GetLootList(sub->GatheredDataSpan)!; // List<DetailedLoot>
+            var charName = plugin.ClientState.LocalPlayer!.Name; // Character Name as an SeString
+            var subName = MemoryHelper.ReadSeStringNullTerminated((nint)sub->Name).ToString(); // Submarine Name as string
+            var subLevel = sub->RankId; // Submarine Level as int
+            var managedArray = new byte[5]; // Array to hold the exploration points
+            Marshal.Copy((nint)sub->CurrentExplorationPoints, managedArray, 0, 5); // Copy the exploration points to the array
+            StringBuilder sb = new StringBuilder(); // StringBuilder to hold the route code
             
             for (int i = 0; i < 5; i++)
             {
                 if (managedArray[i] != 0)
                 {
-                    sb.Append(SiteToLetter(managedArray[i]));
+                    sb.Append(Utils.SiteToLetter(managedArray[i])); // Convert the exploration points to letters
                 }
             }
-            var routeCode = sb.ToString();
-            var hullName = !PartIdToItemId.TryGetValue(sub->HullId, out uint itemId) ? "None?" : Plugin.Data.GetExcelSheet<Item>()!.GetRow(itemId)!.Name;
-            var hullIdentifier = PartToIdentifier(sub->HullId);
-            var sternName = !PartIdToItemId.TryGetValue(sub->SternId, out itemId) ? "None?" : Plugin.Data.GetExcelSheet<Item>()!.GetRow(itemId)!.Name;
-            var sternIdentifier = PartToIdentifier(sub->SternId);
-            var bowName = !PartIdToItemId.TryGetValue(sub->BowId, out itemId) ? "None?" : Plugin.Data.GetExcelSheet<Item>()!.GetRow(itemId)!.Name;
-            var bowIdentifier = PartToIdentifier(sub->BowId);
-            var bridgeName = !PartIdToItemId.TryGetValue(sub->BridgeId, out itemId) ? "None?" : Plugin.Data.GetExcelSheet<Item>()!.GetRow(itemId)!.Name;
-            var bridgeIdentifier = PartToIdentifier(sub->BridgeId);
+
+            var routeCode = sb.ToString(); // Route Code as string
+
+            // Sub Parts
+            var hullName = !Utils.PartIdToItemId.TryGetValue(sub->HullId, out uint itemId) ? "None?" : plugin.Data.GetExcelSheet<Item>()!.GetRow(itemId)!.Name;
+            var hullIdentifier = Utils.PartToIdentifier(sub->HullId);
+            var sternName = !Utils.PartIdToItemId.TryGetValue(sub->SternId, out itemId) ? "None?" : plugin.Data.GetExcelSheet<Item>()!.GetRow(itemId)!.Name;
+            var sternIdentifier = Utils.PartToIdentifier(sub->SternId);
+            var bowName = !Utils.PartIdToItemId.TryGetValue(sub->BowId, out itemId) ? "None?" : plugin.Data.GetExcelSheet<Item>()!.GetRow(itemId)!.Name;
+            var bowIdentifier = Utils.PartToIdentifier(sub->BowId);
+            var bridgeName = !Utils.PartIdToItemId.TryGetValue(sub->BridgeId, out itemId) ? "None?" : plugin.Data.GetExcelSheet<Item>()!.GetRow(itemId)!.Name;
+            var bridgeIdentifier = Utils.PartToIdentifier(sub->BridgeId);
             var buildIdentifier = $"{hullIdentifier}{sternIdentifier}{bowIdentifier}{bridgeIdentifier}";
             buildIdentifier = buildIdentifier.Contains('+') ? string.Concat(buildIdentifier.Replace("+", ""), "+") : buildIdentifier;
+
+            // Loot 
             var totalEarnings = 0;
             var time = DateTime.Now.ToUniversalTime();
-            Plugin.Log.Info("--------- BEGIN SUB ---------");
-            Plugin.Log.Info(string.Format("Character: {0}", charName));
-            Plugin.Log.Info(string.Format("Sub Name: {0}", subName));
-            Plugin.Log.Info(string.Format("Sub Level: {0}", subLevel));
-            Plugin.Log.Info(string.Format("Route Code: {0}", routeCode));
-            Plugin.Log.Info(string.Format("Hull: {0}", hullName));
-            Plugin.Log.Info(string.Format("Stern: {0}", sternName));
-            Plugin.Log.Info(string.Format("Bow: {0}", bowName));
-            Plugin.Log.Info(string.Format("Bridge: {0}", bridgeName));
-            Plugin.Log.Info(string.Format("Build Identifier: {0}", buildIdentifier));
-            Plugin.Log.Info(string.Format("Time: {0} {1}", time.ToLongDateString(), time.ToLongTimeString()));
+            plugin.Log.Info("--------- BEGIN SUB ---------");
+            plugin.Log.Info(string.Format("Character: {0}", charName));
+            plugin.Log.Info(string.Format("Sub Name: {0}", subName));
+            plugin.Log.Info(string.Format("Sub Level: {0}", subLevel));
+            plugin.Log.Info(string.Format("Route Code: {0}", routeCode));
+            plugin.Log.Info(string.Format("Hull: {0}", hullName));
+            plugin.Log.Info(string.Format("Stern: {0}", sternName));
+            plugin.Log.Info(string.Format("Bow: {0}", bowName));
+            plugin.Log.Info(string.Format("Bridge: {0}", bridgeName));
+            plugin.Log.Info(string.Format("Build Identifier: {0}", buildIdentifier));
+            plugin.Log.Info(string.Format("Time: {0} {1}", time.ToLongDateString(), time.ToLongTimeString()));
 
-            Plugin.Log.Info("Loot:");
+            plugin.Log.Info("Loot:");
             foreach (DetailedLoot loot in lootList)
             {
                 if (loot.PrimaryItem.Name.ToString().Contains("Salvage"))
                 {
-                    Plugin.Log.Info(string.Format("- {0} x {1} with a price of {2:n} per unit (Total: {3:n})", loot.PrimaryItem.Name, loot.PrimaryCount, loot.PrimaryItem.PriceLow, loot.PrimaryCount * loot.PrimaryItem.PriceLow));
+                    plugin.Log.Info(string.Format("- {0} x {1} with a price of {2:n} per unit (Total: {3:n})", loot.PrimaryItem.Name, loot.PrimaryCount, loot.PrimaryItem.PriceLow, loot.PrimaryCount * loot.PrimaryItem.PriceLow));
                     totalEarnings += (int)(loot.PrimaryCount * loot.PrimaryItem.PriceLow);
                 }
                 if (loot.ValidAdditional && loot.AdditionalItem.Name.ToString().Contains("Salvage"))
                 {
-                    Plugin.Log.Info(string.Format("- {0} x {1} with a price of {2:n} per unit (Total: {3:n})", loot.AdditionalItem.Name, loot.AdditionalCount, loot.AdditionalItem.PriceLow, loot.AdditionalCount * loot.AdditionalItem.PriceLow));
+                    plugin.Log.Info(string.Format("- {0} x {1} with a price of {2:n} per unit (Total: {3:n})", loot.AdditionalItem.Name, loot.AdditionalCount, loot.AdditionalItem.PriceLow, loot.AdditionalCount * loot.AdditionalItem.PriceLow));
                     totalEarnings += (int)(loot.AdditionalCount * loot.AdditionalItem.PriceLow);
                 }
 
             }
-            Plugin.Log.Info(string.Format("Total Earnings: {0:n}", totalEarnings));
-            Plugin.Log.Info("---------- END SUB ----------");
+            plugin.Log.Info(string.Format("Total Earnings: {0:n}", totalEarnings));
+            plugin.Log.Info("---------- END SUB ----------");
+
+            var payload = new Payload(this.plugin.Configuration.name, charName.ToString(), subName, time, subLevel.ToString(), routeCode, buildIdentifier, $"{routeCode}{buildIdentifier}", hullName, sternName, bowName, bridgeName, totalEarnings);
+            var t = new Thread(() => this.plugin.UploadManager!.UploadData(payload, plugin));
+            t.Start();
         }
         catch (Exception e)
         {
-            Plugin.Log.Error(e.Message);
-            Plugin.Log.Error(e.StackTrace ?? "Unknown");
+            plugin.Log.Error(e.Message);
+            plugin.Log.Error(e.StackTrace ?? "Unknown");
         }
     }
 
@@ -274,67 +224,5 @@ public class HookManager
         [JsonIgnore] public Item PrimaryItem => ItemSheet.GetRow(Primary)!;
         [JsonIgnore] public Item AdditionalItem => ItemSheet.GetRow(Additional)!;
         [JsonIgnore] public bool ValidAdditional => Additional > 0;
-    }
-
-    public static string SiteToLetter(uint num)
-    {
-
-        var index = (int)(num - 1);  // 0 indexed
-
-        const string letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-
-        var value = "";
-
-        if (index >= letters.Length)
-            value += letters[(index / letters.Length) - 1];
-
-        value += letters[index % letters.Length];
-
-        return value;
-    }
-
-    public static string PartToIdentifier(ushort partId)
-    {
-        return ((partId - 1) / 4) switch
-        {
-            0 => "S",
-            1 => "U",
-            2 => "W",
-            3 => "C",
-            4 => "Y",
-
-            5 => $"{PartToIdentifier((ushort)(partId - 20))}+",
-            6 => $"{PartToIdentifier((ushort)(partId - 20))}+",
-            7 => $"{PartToIdentifier((ushort)(partId - 20))}+",
-            8 => $"{PartToIdentifier((ushort)(partId - 20))}+",
-            9 => $"{PartToIdentifier((ushort)(partId - 20))}+",
-            _ => "Unknown"
-        };
-    }
-
-    public static string ProcToText(uint proc)
-    {
-        return proc switch
-        {
-            // Surveillance Procs
-            4 => "T3 High",
-            5 => "T2 High",
-            6 => "T1 High",
-            7 => "T2 Mid",
-            8 => "T1 Mid",
-            9 => "T1 Low",
-
-            // Retrieval Procs
-            14 => "Optimal",
-            15 => "Normal",
-            16 => "Poor",
-
-            // Favor Procs
-            18 => "Yes",
-            19 => "CSCFIFFE",
-            20 => "Too Low",
-
-            _ => "Unknown"
-        };
     }
 }
