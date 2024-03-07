@@ -8,6 +8,7 @@ using SubDataLogger.Windows;
 using Dalamud.Game;
 using System.Threading;
 using System;
+using System.Runtime.CompilerServices;
 
 namespace SubDataLogger
 {
@@ -57,6 +58,7 @@ namespace SubDataLogger
             this.ClientState = clientState;
             this.Data = data;
             this.UploadManager = new UploadManager(this);
+            
 
 
             this.Configuration = this.PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
@@ -77,6 +79,10 @@ namespace SubDataLogger
             this.PluginInterface.UiBuilder.OpenConfigUi += DrawConfigUI;
 
             this.HookManager = new HookManager(this);
+            this.ClientState.Login += OnLogin;
+            this.ClientState.Logout += OnLogout;
+            var sheetValidationThread = new Thread(() => this.UploadManager!.ValidateConfig());
+            sheetValidationThread.Start();
         }
 
         public void Dispose()
@@ -87,6 +93,22 @@ namespace SubDataLogger
             this.HookManager.Dispose();
             this.UploadManager?.Dispose();
             this.CommandManager.RemoveHandler(CommandName);
+        }
+
+        private void OnLogin()
+        {
+            if (this.UploadManager == null)
+            {
+                this.UploadManager = new UploadManager(this);
+                var sheetValidationThread = new Thread(() => this.UploadManager!.ValidateConfig());
+                sheetValidationThread.Start();
+            }
+        }
+
+        private void OnLogout()
+        {
+            this.UploadManager?.Dispose();
+            this.UploadManager = null;
         }
 
         private void OnCommand(string command, string args)

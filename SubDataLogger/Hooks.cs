@@ -63,7 +63,7 @@ public class HookManager
         packetHandlerHook.Original(param1, param2, param3, param4, param5);
 
         // We only care about voyage Result
-        if (param1 != 721343)
+        if (param1 != 721343 || !this.plugin.Configuration.Validate())
             return;
 
         try

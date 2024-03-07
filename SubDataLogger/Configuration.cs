@@ -28,5 +28,14 @@ namespace SubDataLogger
         {
             this.pluginInterface!.SavePluginConfig(this);
         }
+
+        public bool Validate()
+        {
+            if (string.IsNullOrEmpty(this.sheetID) || string.IsNullOrEmpty(this.sheetName) || string.IsNullOrEmpty(this.range))
+            {
+                return false;
+            }
+            return true;
+        }
     }
 }

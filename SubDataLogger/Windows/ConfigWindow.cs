@@ -1,5 +1,6 @@
 using System;
 using System.Numerics;
+using System.Threading;
 using Dalamud.Interface.Windowing;
 using ImGuiNET;
 
@@ -8,6 +9,7 @@ namespace SubDataLogger.Windows;
 public class ConfigWindow : Window, IDisposable
 {
     private Configuration Config;
+    private Plugin plugin;
 
     public ConfigWindow(Plugin plugin) : base(
         "Config",
@@ -18,6 +20,7 @@ public class ConfigWindow : Window, IDisposable
         this.SizeCondition = ImGuiCond.Always;
 
         this.Config = plugin.Configuration;
+        this.plugin = plugin;
     }
 
     public void Dispose() { }

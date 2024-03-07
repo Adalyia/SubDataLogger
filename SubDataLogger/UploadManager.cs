@@ -73,6 +73,33 @@ public class UploadManager
 
     }
 
+    public bool ValidateConfig()
+    {
+        if (!plugin.Configuration.Validate())
+        {
+            plugin.Log.Error("Invalid configuration, please check your settings");
+        }
+
+        try
+        {
+            var response = Service!.Spreadsheets.Get(plugin.Configuration.sheetID).Execute();
+            if (response.Sheets.Any(sheet => sheet.Properties.Title == plugin.Configuration.sheetName))
+            {
+                plugin.Log.Info($"Sheet with name {plugin.Configuration.sheetName} found in workbook {plugin.Configuration.sheetID}");
+                return true;
+            }
+            else
+            {
+                plugin.Log.Error("Sheet not found");
+            }
+
+        } catch (Exception e)
+        {
+            plugin.Log.Error($"Access denied, are you connected to the internet and is the service account permitted to access that sheet?");
+        }
+        return false;
+    }
+
 
 
     public void Dispose()
