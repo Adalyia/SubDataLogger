@@ -110,7 +110,7 @@ public class HookManager
 
             // Loot 
             var totalEarnings = 0;
-            var time = DateTime.Now.ToUniversalTime();
+            var time = DateTime.Now.ToUniversalTime().ToString("MM/dd/yyyy HH:mm:ss");
             plugin.Log.Info("--------- BEGIN SUB ---------");
             plugin.Log.Info(string.Format("Character: {0}", charName));
             plugin.Log.Info(string.Format("Sub Name: {0}", subName));
@@ -121,7 +121,7 @@ public class HookManager
             plugin.Log.Info(string.Format("Bow: {0}", bowName));
             plugin.Log.Info(string.Format("Bridge: {0}", bridgeName));
             plugin.Log.Info(string.Format("Build Identifier: {0}", buildIdentifier));
-            plugin.Log.Info(string.Format("Time: {0} {1}", time.ToLongDateString(), time.ToLongTimeString()));
+            plugin.Log.Info(string.Format("Time: {0}", time));
 
             plugin.Log.Info("Loot:");
             foreach (DetailedLoot loot in lootList)

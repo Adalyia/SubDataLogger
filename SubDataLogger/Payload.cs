@@ -2,13 +2,13 @@ using System;
 
 namespace SubDataLogger;
 
-public class Payload(string name, string characterName, string subName, DateTime timestamp, string subLevel, string subRoute, string subBuild, string voyageSig, string subHull, string subStern, string subBow, string subBridge, double earnings)
+public class Payload(string name, string characterName, string subName, string timestamp, string subLevel, string subRoute, string subBuild, string voyageSig, string subHull, string subStern, string subBow, string subBridge, double earnings)
 {
     public string? GUID { get; set; } = Guid.NewGuid().ToString();
     public string? Name { get; set; } = name;
     public string? CharacterName { get; set; } = characterName;
     public string? SubName { get; set; } = subName;
-    public DateTime? Timestamp { get; set; } = timestamp;
+    public string? Timestamp { get; set; } = timestamp;
     public string? SubLevel { get; set; } = subLevel;
     public string? SubRoute { get; set; } = subRoute;
     public string? SubBuild { get; set; } = subBuild;
