@@ -126,12 +126,12 @@ public class HookManager
             plugin.Log.Info("Loot:");
             foreach (DetailedLoot loot in lootList)
             {
-                if (loot.PrimaryItem.Name.ToString().Contains("Salvage"))
+                if (IsSalvageItem(loot.PrimaryItem.Name.ToString()))
                 {
                     plugin.Log.Info(string.Format("- {0} x {1} with a price of {2:n} per unit (Total: {3:n})", loot.PrimaryItem.Name, loot.PrimaryCount, loot.PrimaryItem.PriceLow, loot.PrimaryCount * loot.PrimaryItem.PriceLow));
                     totalEarnings += (int)(loot.PrimaryCount * loot.PrimaryItem.PriceLow);
                 }
-                if (loot.ValidAdditional && loot.AdditionalItem.Name.ToString().Contains("Salvage"))
+                if (loot.ValidAdditional && IsSalvageItem(loot.AdditionalItem.Name.ToString()))
                 {
                     plugin.Log.Info(string.Format("- {0} x {1} with a price of {2:n} per unit (Total: {3:n})", loot.AdditionalItem.Name, loot.AdditionalCount, loot.AdditionalItem.PriceLow, loot.AdditionalCount * loot.AdditionalItem.PriceLow));
                     totalEarnings += (int)(loot.AdditionalCount * loot.AdditionalItem.PriceLow);
@@ -140,6 +140,17 @@ public class HookManager
             }
             plugin.Log.Info(string.Format("Total Earnings: {0:n}", totalEarnings));
             plugin.Log.Info("---------- END SUB ----------");
+            if (!IsSalvageRoute(routeCode))
+            {
+                plugin.Log.Info("Not a salvage route, not uploading.");
+                return;
+            }
+            if (totalEarnings == 0 && subLevel < 79)
+            {
+                plugin.Log.Info("No salvage items found, not uploading.");
+                return;
+            }
+            
 
             var payload = new Payload(this.plugin.Configuration.name, charName.ToString(), subName, time, subLevel.ToString(), routeCode, buildIdentifier, $"{routeCode}{buildIdentifier}", hullName, sternName, bowName, bridgeName, totalEarnings);
             var t = new Thread(() => this.plugin.UploadManager!.UploadData(payload, plugin));
@@ -150,6 +161,35 @@ public class HookManager
             plugin.Log.Error(e.Message);
             plugin.Log.Error(e.StackTrace ?? "Unknown");
         }
+    }
+
+    public static bool IsSalvageItem(String s)
+    {
+        String[] salvageItemNames =
+        {
+            "Extravagant Salvaged Bracelet",
+            "Extravagant Salvaged Earring",
+            "Extravagant Salvaged Necklace",
+            "Extravagant Salvaged Ring",
+            "Salvaged Bracelet",
+            "Salvaged Earring",
+            "Salvaged Necklace",
+            "Salvaged Ring"
+        };
+        return salvageItemNames.Contains(s);
+    }
+
+    public static bool IsSalvageRoute(String s)
+    {
+        String[] salvageRoutes =
+        {
+            "M",
+            "R",
+            "O",
+            "J",
+            "Z"
+        };
+        return salvageRoutes.Any(s.Contains);
     }
 
     public static List<DetailedLoot>? GetLootList(Span<HousingWorkshopSubmarineGathered> data)
