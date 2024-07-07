@@ -19,7 +19,7 @@ namespace SubDataLogger
         private const string CommandName = "/sdata";
         
         // Dalamud services
-        public DalamudPluginInterface PluginInterface { get; init; }
+        public IDalamudPluginInterface PluginInterface { get; init; }
         public ICommandManager CommandManager { get; init; }
         public ISigScanner SigScanner { get; init; }
         public IPluginLog Log { get; init; }
@@ -40,7 +40,7 @@ namespace SubDataLogger
         public UploadManager? UploadManager = null!;
 
         public Plugin(
-            DalamudPluginInterface pluginInterface,
+            IDalamudPluginInterface pluginInterface,
             ICommandManager commandManager,
             ISigScanner sigScanner,
             IPluginLog log,

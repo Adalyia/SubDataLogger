@@ -24,11 +24,6 @@ public class UploadManager
         this.plugin = plugin;
         InitializeService(this.plugin.Name);
         this.plugin.Log.Info("Google Sheets Service initialized");
-/*        var stuff = Service!.Spreadsheets.Values.Get("1qgWvEcKiU_jsmi66f4jeMMVnzhXB2FmCTB2WL6maJt0", "C2").Execute().Values;
-*//*        foreach (var value in stuff)
-        {
-            plugin.Log.Info(value[0].ToString());
-        }*/
 
     }
     private void InitializeService(string appName)

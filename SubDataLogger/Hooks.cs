@@ -4,7 +4,7 @@
 
 using Dalamud.Hooking;
 using Dalamud.Memory;
-using FFXIVClientStructs.FFXIV.Client.Game.Housing;
+using FFXIVClientStructs.FFXIV.Client.Game;
 using Lumina.Excel.GeneratedSheets;
 using System;
 using System.Collections.Generic;
@@ -14,6 +14,8 @@ using Lumina.Excel;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
+using System.Runtime.CompilerServices;
+using Lumina.Text.ReadOnly;
 
 namespace SubDataLogger;
 
@@ -26,8 +28,10 @@ public class HookManager
     private delegate void PacketDelegate(uint param1, ushort param2, sbyte param3, Int64 param4, char param5);
     private readonly Hook<PacketDelegate> packetHandlerHook;
     private static ExcelSheet<Item> ItemSheet = null!;
+    public static unsafe ReadOnlySeStringSpan NameToSeString(Span<byte> name) => new((byte*)Unsafe.AsPointer(ref name[0]));
 
-    
+
+
 
     public HookManager(Plugin plugin)
     {
@@ -72,28 +76,26 @@ public class HookManager
             if (instance == null || instance->WorkshopTerritory == null)
                 return;
 
-            var current = instance->WorkshopTerritory->Submersible.DataPointerListSpan[4];
+            var current = instance->WorkshopTerritory->Submersible.DataPointers[4];
             if (current.Value == null)
                 return;
 
             // Get the sub data
             var sub = current.Value; // HousingWorkshopSubmarine
-            var lootList = GetLootList(sub->GatheredDataSpan)!; // List<DetailedLoot>
+            var lootList = GetLootList(sub->GatheredData)!; // List<DetailedLoot>
             var charName = plugin.ClientState.LocalPlayer!.Name; // Character Name as an SeString
-            var subName = MemoryHelper.ReadSeStringNullTerminated((nint)sub->Name).ToString(); // Submarine Name as string
+            var subName = NameToSeString(sub->Name).ExtractText(); // Submarine Name as string
             var subLevel = sub->RankId; // Submarine Level as int
-            var managedArray = new byte[5]; // Array to hold the exploration points
-            Marshal.Copy((nint)sub->CurrentExplorationPoints, managedArray, 0, 5); // Copy the exploration points to the array
             StringBuilder sb = new StringBuilder(); // StringBuilder to hold the route code
-            
-            for (int i = 0; i < 5; i++)
+            foreach (var point in sub->CurrentExplorationPoints)
             {
-                if (managedArray[i] != 0)
+                if (point > 0)
                 {
-                    sb.Append(Utils.SiteToLetter(managedArray[i])); // Convert the exploration points to letters
+                    sb.Append(Utils.SiteToLetter(point));
                 }
+                
             }
-
+            
             var routeCode = sb.ToString(); // Route Code as string
 
             // Sub Parts
