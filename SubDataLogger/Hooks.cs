@@ -5,7 +5,6 @@
 using Dalamud.Hooking;
 using Dalamud.Memory;
 using FFXIVClientStructs.FFXIV.Client.Game;
-using Lumina.Excel.GeneratedSheets;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -16,6 +15,7 @@ using System.Text;
 using System.Threading;
 using System.Runtime.CompilerServices;
 using Lumina.Text.ReadOnly;
+using Lumina.Excel.Sheets;
 
 namespace SubDataLogger;
 
@@ -154,7 +154,7 @@ public class HookManager
             }
             
 
-            var payload = new Payload(this.plugin.Configuration.name, charName.ToString(), subName, time, subLevel.ToString(), routeCode, buildIdentifier, $"{routeCode}{buildIdentifier}", hullName, sternName, bowName, bridgeName, totalEarnings);
+            var payload = new Payload(this.plugin.Configuration.name, charName.ToString(), subName, time, subLevel.ToString(), routeCode, buildIdentifier, $"{routeCode}{buildIdentifier}", hullName.ToString(), sternName.ToString(), bowName.ToString(), bridgeName.ToString(), totalEarnings);
             var t = new Thread(() => this.plugin.UploadManager!.UploadData(payload, plugin));
             t.Start();
         }

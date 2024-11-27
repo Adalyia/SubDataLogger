@@ -105,7 +105,7 @@ namespace SubDataLogger
             }
         }
 
-        private void OnLogout()
+        private void OnLogout(int type, int code)
         {
             this.UploadManager?.Dispose();
             this.UploadManager = null;
