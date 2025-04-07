@@ -75,7 +75,9 @@ namespace SubDataLogger
                 HelpMessage = "Opens the config window"
             });
 
+            
             this.PluginInterface.UiBuilder.Draw += DrawUI;
+            this.PluginInterface.UiBuilder.OpenMainUi += DrawConfigUI;
             this.PluginInterface.UiBuilder.OpenConfigUi += DrawConfigUI;
 
             this.HookManager = new HookManager(this);
