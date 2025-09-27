@@ -2,7 +2,7 @@ using System;
 using System.Numerics;
 using System.Threading;
 using Dalamud.Interface.Windowing;
-using ImGuiNET;
+using Dalamud.Bindings.ImGui;
 
 namespace SubDataLogger.Windows;
 
@@ -12,12 +12,12 @@ public class ConfigWindow : Window, IDisposable
     private Plugin plugin;
 
     public ConfigWindow(Plugin plugin) : base(
-        "Config",
+        "Config##SubDataLogger",
         ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoScrollbar |
         ImGuiWindowFlags.NoScrollWithMouse)
     {
         this.Size = new Vector2(375, 200);
-        this.SizeCondition = ImGuiCond.Always;
+  
 
         this.Config = plugin.Configuration;
         this.plugin = plugin;
