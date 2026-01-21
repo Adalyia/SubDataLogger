@@ -26,6 +26,7 @@ namespace SubDataLogger
         public IGameInteropProvider Hook { get; init; }
         public IToastGui ToastGui { get; init; }
         public IClientState ClientState { get; init; }
+        public IPlayerState PlayerState { get; init; }  
         public IDataManager Data { get; init; }
 
         // Plugin configuration
@@ -47,6 +48,7 @@ namespace SubDataLogger
             IGameInteropProvider hook,
             IToastGui toastGui,
             IClientState clientState,
+            IPlayerState playerState,
             IDataManager data)
         {
             this.PluginInterface = pluginInterface;
@@ -56,6 +58,7 @@ namespace SubDataLogger
             this.Hook = hook;
             this.ToastGui = toastGui;
             this.ClientState = clientState;
+            this.PlayerState = playerState;
             this.Data = data;
             this.UploadManager = new UploadManager(this);
             

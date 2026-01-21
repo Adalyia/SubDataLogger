@@ -83,7 +83,7 @@ public class HookManager
             // Get the sub data
             var sub = current.Value; // HousingWorkshopSubmarine
             var lootList = GetLootList(sub->GatheredData)!; // List<DetailedLoot>
-            var charName = plugin.ClientState.LocalPlayer!.Name; // Character Name as an SeString
+            var charName = plugin.PlayerState.CharacterName; // Character Name as an SeString
             var subName = NameToSeString(sub->Name).ExtractText(); // Submarine Name as string
             var subLevel = sub->RankId; // Submarine Level as int
             StringBuilder sb = new StringBuilder(); // StringBuilder to hold the route code
