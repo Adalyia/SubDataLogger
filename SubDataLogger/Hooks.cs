@@ -16,17 +16,16 @@ using System.Threading;
 using System.Runtime.CompilerServices;
 using Lumina.Text.ReadOnly;
 using Lumina.Excel.Sheets;
+using FFXIVClientStructs.FFXIV.Client.Game.Event;
+using FFXIVClientStructs.FFXIV.Client.Network;
 
 namespace SubDataLogger;
 
-public class HookManager
+public unsafe class HookManager
 {
     private readonly Plugin plugin;
 
-    private const string PacketReceiverSig = "48 89 5C 24 ?? 48 89 6C 24 ?? 48 89 74 24 ?? 57 48 83 EC ?? 49 8B D9 41 0F B6 F8 0F B7 F2 8B E9 E8 ?? ?? ?? ?? 44 0F B6 54 24 ?? 44 0F B6 CF 44 88 54 24 ?? 44 0F B7 C6 8B D5";
-    private const string PacketReceiverSigCN = "E8 ?? ?? ?? ?? E9 ?? ?? ?? ?? 44 0F B6 46 ?? 4C 8D 4E 17";
-    private delegate void PacketDelegate(uint param1, ushort param2, sbyte param3, Int64 param4, char param5);
-    private readonly Hook<PacketDelegate> packetHandlerHook;
+    private Hook<PacketDispatcher.Delegates.HandleEventYieldPacket> packetHandlerHook { get; init; }
     private static ExcelSheet<Item> ItemSheet = null!;
     public static unsafe ReadOnlySeStringSpan NameToSeString(Span<byte> name) => new((byte*)Unsafe.AsPointer(ref name[0]));
 
@@ -39,21 +38,7 @@ public class HookManager
 
         ItemSheet = this.plugin.Data.GetExcelSheet<Item>()!;
 
-        // Try to resolve the CN sig if normal one fails ...
-        // Doing this because CN people use an outdated version that still uploads data
-        // so trying to get them at least somewhat up to date
-        nint packetReceiverPtr;
-        try
-        {
-            packetReceiverPtr = this.plugin.SigScanner.ScanText(PacketReceiverSig);
-        }
-        catch (Exception)
-        {
-            this.plugin.Log.Error("Exception in sig scan, maybe CN client?");
-            packetReceiverPtr = this.plugin.SigScanner.ScanText(PacketReceiverSigCN);
-        }
-
-        packetHandlerHook = this.plugin.Hook.HookFromAddress<PacketDelegate>(packetReceiverPtr, PacketReceiver);
+        packetHandlerHook = plugin.Hook.HookFromAddress<PacketDispatcher.Delegates.HandleEventYieldPacket>(PacketDispatcher.MemberFunctionPointers.HandleEventYieldPacket, PacketReceiver);
         packetHandlerHook.Enable();
     }
 
@@ -62,12 +47,12 @@ public class HookManager
         packetHandlerHook.Dispose();
     }
 
-    private unsafe void PacketReceiver(uint param1, ushort param2, sbyte param3, Int64 param4, char param5)
+    private unsafe void PacketReceiver(EventId id, short scene, byte responseId, int* intParams, byte argCount)
     {
-        packetHandlerHook.Original(param1, param2, param3, param4, param5);
+        packetHandlerHook.Original(id, scene, responseId, intParams, argCount);
 
         // We only care about voyage Result
-        if (param1 != 721343 || !this.plugin.Configuration.Validate())
+        if (id != 721343 || !this.plugin.Configuration.Validate())
             return;
 
         try

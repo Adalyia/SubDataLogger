@@ -4,5 +4,12 @@
   "Punchline": "Automates logging of voyage loot",
   "Description": "Automates logging of voyage loot. /sdata",
   "ApplicableVersion": "any",
-  "Tags": []
+    "Tags": [
+        "utility",
+        "data",
+        "workshop",
+        "submersible",
+        "subs",
+        "voyage"
+    ]
 }
